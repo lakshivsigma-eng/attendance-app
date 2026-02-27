@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ellengale PS - Pro Attendance System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .attendance-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .present-active { background-color: #10b981 !important; color: white !important; border-color: #059669 !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .absent-active { background-color: #ef4444 !important; color: white !important; border-color: #dc2626 !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+        .glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); }
+        .history-item:hover .delete-history { opacity: 1; }
+        .pulse-pending { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-[#f8fafc] min-h-screen pb-40">
+
+    <!-- Top Navigation / Brand -->
+    <nav class="glass text-white p-5 sticky top-0 z-30 shadow-xl border-b border-slate-700">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/20">E</div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-tight leading-none">ELLENGALE PS</h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-[0.2em] mt-1 font-semibold">Teacher Portal v2.0</p>
+                </div>
+            </div>
+            <div id="stats" class="text-xs font-bold bg-white/10 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md">
+                0/25 RECORDED
+            </div>
+        </div>
+    </nav>
+
+    <!-- App Content -->
+    <main class="max-w-2xl mx-auto px-4 pt-8 space-y-10">
+        
+        <!-- Teacher Control Panel -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <span class="w-1.5 h-5 bg-blue-600 rounded-full"></span>
+                    Teacher Controls
+                </h2>
+                <span id="current-date" class="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-md"></span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="markAll('HERE')" class="flex flex-col items-center justify-center p-4 bg-emerald-50 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-all group">
+                    <span class="text-emerald-600 font-bold text-sm">ALL HERE</span>
+                    <span class="text-[10px] text-emerald-500 font-medium">Mark everyone present</span>
+                </button>
+                <button onclick="markAll('AWAY')" class="flex flex-col items-center justify-center p-4 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all group">
+                    <span class="text-red-600 font-bold text-sm">ALL AWAY</span>
+                    <span class="text-[10px] text-red-500 font-medium">Mark everyone absent</span>
+                </button>
+            </div>
+
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="Search student name or ID..." 
+                       class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-700">
+                <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+        </section>
+
+        <!-- Student List -->
+        <section>
+            <div id="listContainer" class="grid gap-3">
+                <!-- Students populated by JS -->
+            </div>
+        </section>
+
+        <!-- The "Store" (History Log) -->
+        <section class="pb-10">
+            <h2 class="font-bold text-slate-800 mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-5 bg-slate-400 rounded-full"></span>
+                    Attendance Vault
+                </div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Archived Sessions</span>
+            </h2>
+            <div id="historyLog" class="space-y-3">
+                <div class="text-center py-12 bg-white border-2 border-dashed border-slate-200 rounded-2xl">
+                    <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                    <p class="text-slate-400 text-sm font-medium">Vault is currently empty.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Command Center -->
+    <div class="fixed bottom-0 left-0 right-0 glass border-t border-slate-700 p-5 shadow-[0_-20px_40px_rgba(0,0,0,0.2)] z-40">
+        <div class="max-w-2xl mx-auto flex gap-4">
+            <button onclick="resetCurrent()" class="flex-1 py-4 px-4 bg-slate-800 text-slate-300 font-bold rounded-2xl hover:bg-slate-700 transition-all border border-slate-600">
+                RESET
+            </button>
+            <button onclick="saveToSystem()" class="flex-[2] py-4 px-4 bg-blue-600 text-white font-extrabold rounded-2xl shadow-xl shadow-blue-900/40 hover:bg-blue-500 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                <span>SAVE & CLOSE DAY</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const studentList = [
+            { id: "1041341", code: "RG", text: "RG - 05PS 1041341" },
+            { id: "943461", code: "AA", text: "AA - 05PS 943461" },
+            { id: "1032870", code: "AB", text: "AB - 05PS 1032870" },
+            { id: "1124032", code: "AE", text: "AE - 05PS 1124032" },
+            { id: "940919", code: "AG", text: "AG - 05PS 940919" },
+            { id: "940822", code: "AH", text: "AH - 05PS 940822" },
+            { id: "960439", code: "AS", text: "AS - 05PS 960439" },
+            { id: "1127395", code: "CS", text: "CS - 05PS 1127395" },
+            { id: "1132737", code: "DB", text: "DB - 05PS 1132737" },
+            { id: "1055010", code: "DL", text: "DL - 05PS 1055010" },
+            { id: "1089397", code: "FN", text: "FN - 05PS 1089397" },
+            { id: "1007993", code: "IS", text: "IS - 05PS 1007993" },
+            { id: "1036508", code: "JD", text: "JD - 05PS 1036508" },
+            { id: "954174", code: "JG", text: "JG - 05PS 954174" },
+            { id: "1003239", code: "KC", text: "KC - 05PS 1003239" },
+            { id: "950289", code: "LL", text: "LL - 05PS 950289" },
+            { id: "1118480", code: "LR", text: "LR - 05PS 1118480" },
+            { id: "1008730", code: "MG", text: "MG - 05PS 1008730" },
+            { id: "1061278", code: "MH", text: "MH - 05PS 1061278" },
+            { id: "946281", code: "MX", text: "MX - 05PS 946281" },
+            { id: "1057236", code: "NS", text: "NS - 05PS 1057236" },
+            { id: "993594", code: "PJ", text: "PJ - 05PS 993594" },
+            { id: "1033224", code: "PK", text: "PK - 05PS 1033224" },
+            { id: "1103431", code: "SS", text: "SS - 05PS 1103431" },
+            { id: "1083706", code: "YM", text: "YM - 05PS 1083706" }
+        ];
+
+        let attendance = {};
+        let systemHistory = JSON.parse(localStorage.getItem('ellengaleHistory') || '[]');
+
+        function init() {
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            renderList();
+            renderHistory();
+        }
+
+        function renderList(filter = "") {
+            const container = document.getElementById('listContainer');
+            container.innerHTML = "";
+            const filtered = studentList.filter(s => s.text.toLowerCase().includes(filter.toLowerCase()));
+            
+            filtered.forEach(student => {
+                const status = attendance[student.id];
+                const card = document.createElement('div');
+                card.className = `attendance-card bg-white p-4 rounded-2xl border flex items-center justify-between shadow-sm transition-all ${!status ? 'border-l-4 border-l-blue-400' : 'border-slate-200'}`;
+                card.innerHTML = `
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-extrabold text-blue-600 uppercase tracking-tighter">${student.code}</span>
+                            ${!status ? '<span class="w-1.5 h-1.5 rounded-full bg-blue-400 pulse-pending"></span>' : ''}
+                        </div>
+                        <span class="text-slate-800 font-bold text-base tracking-tight">${student.id}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="mark('${student.id}', 'HERE')" class="w-20 py-3 text-[10px] font-extrabold rounded-xl border transition-all ${status === 'HERE' ? 'present-active' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}">HERE</button>
+                        <button onclick="mark('${student.id}', 'AWAY')" class="w-20 py-3 text-[10px] font-extrabold rounded-xl border transition-all ${status === 'AWAY' ? 'absent-active' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}">AWAY</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            updateStats();
+        }
+
+        function mark(id, status) {
+            attendance[id] = status;
+            renderList(document.getElementById('searchInput').value);
+        }
+
+        function markAll(status) {
+            studentList.forEach(s => {
+                attendance[s.id] = status;
+            });
+            renderList(document.getElementById('searchInput').value);
+        }
+
+        function updateStats() {
+            const marked = Object.keys(attendance).length;
+            document.getElementById('stats').textContent = `${marked}/${studentList.length} RECORDED`;
+        }
+
+        function resetCurrent() {
+            if(confirm("Discard all current marks?")) {
+                attendance = {};
+                renderList();
+            }
+        }
+
+        function saveToSystem() {
+            const totalStudents = studentList.length;
+            const markedCount = Object.keys(attendance).length;
+
+            if (markedCount < totalStudents) {
+                if(!confirm(`Only ${markedCount}/${totalStudents} students are marked. Save anyway?`)) return;
+            }
+
+            const record = {
+                date: new Date().toLocaleString(),
+                timestamp: Date.now(),
+                data: {...attendance},
+                stats: {
+                    here: Object.values(attendance).filter(v => v === 'HERE').length,
+                    away: Object.values(attendance).filter(v => v === 'AWAY').length
+                }
+            };
+
+            systemHistory.unshift(record);
+            localStorage.setItem('ellengaleHistory', JSON.stringify(systemHistory));
+            
+            attendance = {};
+            document.getElementById('searchInput').value = "";
+            renderList();
+            renderHistory();
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function renderHistory() {
+            const log = document.getElementById('historyLog');
+            if (systemHistory.length === 0) return;
+
+            log.innerHTML = "";
+            systemHistory.forEach((item, index) => {
+                const entry = document.createElement('div');
+                entry.className = "history-item bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between relative shadow-sm hover:border-blue-200 transition-all";
+                entry.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter">${item.date}</p>
+                            <p class="text-sm font-extrabold text-slate-800">
+                                <span class="text-emerald-500">${item.stats.here} Present</span> • 
+                                <span class="text-red-500">${item.stats.away} Away</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="downloadHistory(${index})" class="p-3 text-blue-600 bg-blue-50 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </button>
+                        <button onclick="deleteHistory(${index})" class="delete-history md:opacity-0 p-3 text-red-500 bg-red-50 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                log.appendChild(entry);
+            });
+        }
+
+        function downloadHistory(index) {
+            const item = systemHistory[index];
+            let text = `==========================================\n`;
+            text += `ELLENGALE PS - OFFICIAL ATTENDANCE LOG\n`;
+            text += `SESSION: ${item.date}\n`;
+            text += `SUMMARY: ${item.stats.here} Present / ${item.stats.away} Absent\n`;
+            text += `==========================================\n\n`;
+            
+            studentList.forEach(s => {
+                const status = item.data[s.id] || "PENDING";
+                text += `[${status.padEnd(7)}] | ID: ${s.id.padEnd(8)} | Code: ${s.code}\n`;
+            });
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Ellengale_Log_${item.timestamp}.txt`;
+            a.click();
+        }
+
+        function deleteHistory(index) {
+            if (confirm("Permanently erase this session from the vault?")) {
+                systemHistory.splice(index, 1);
+                localStorage.setItem('ellengaleHistory', JSON.stringify(systemHistory));
+                renderHistory();
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderList(e.target.value);
+        });
+
+        init();
+    </script>
+</body>
+</html>
